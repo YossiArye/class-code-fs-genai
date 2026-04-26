@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        .responsive-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            background-color: aquamarine;
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .box {
+            background-color: lightblue;
+            color: orange;
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px;
+        }
+
+
+
+
+        @media (max-width : 768px) and (min-width: 400px) {
+            .responsive-container {
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: 1fr 1fr;
+            }
+
+            .box-3 {
+                grid-column: 1 / span 2;
+            }
+        }
+
+
+        @media (max-width : 400px) {
+            .responsive-container {
+                display: flex;
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="responsive-container">
+        <div class="box">Box 1</div>
+        <div class="box">Box 2</div>
+        <div class="box box-3">Box 3</div>
+    </div>
+</body>
+
+</html>

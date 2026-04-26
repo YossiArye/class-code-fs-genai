@@ -1,0 +1,22 @@
+#sub-title-cont {
+    background-color: yellow;
+}
+
+
+
+.small-font {
+    color: red;
+    line-height: 25px;
+}
+
+div {
+    color: blue;
+}
+
+#sub-title-cont {
+    color: orange;
+}
+
+p {
+    font-size: small;
+}
