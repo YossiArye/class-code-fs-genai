@@ -22,11 +22,11 @@ const animalsVoice = {
     }
 }
 
-// console.log(animalsVoice);
+//console.log(animalsVoice);
 
 
 
-// animalsVoice1.login()
+//animalsVoice1.login()
 
 animalsVoice.login()
 
