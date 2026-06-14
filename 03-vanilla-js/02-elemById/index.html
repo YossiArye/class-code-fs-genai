@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <h1 id="main-header">Hello World<span style="display: none;">!!!</span></h1>
+    <h2 id="sub-header"></h2>
+    <script>
+      let mainHeader = document.getElementById("main-header")
+      console.dir(mainHeader)
+
+      let subHeader = document.getElementById("sub-header")
+      subHeader.innerText = mainHeader.innerText//rendered html + css
+      subHeader.innerText = mainHeader.innerHTML//html as is
+      subHeader.innerText = mainHeader.textContent//rendered html but not css
+      subHeader.style.backgroundColor = "red"
+      subHeader.style.borderLeft = "10px solid yellow"
+
+     
+      for(let i = 0; i < 10; i++){
+         console.log("hello " + i)
+      }
+
+      console.log("hello " + 1)
+      console.log("hello " + 2)
+      console.log("hello " + 3)
+
+
+
+    </script>
+  </body>
+</html>

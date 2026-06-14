@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <a href="">home page</a>
+    <ul>
+      <li class="list-item">Coffee</li>
+      <li class="list-item">Tea</li>
+      <li class="list-item">Milk</li>
+    </ul>
+    <script>
+      let listItems = document.getElementsByClassName("list-item")
+      listItems[2].innerHTML = '<a href="http://www.google.com" target="_blank">Google</a>'
+
+      for(let i = 0; i < listItems.length; i++){
+        if(i === 0){
+            console.dir(listItems[i])
+            listItems[i].style.border = "1px solid black"
+
+        }
+        listItems[i].style.color = 'blue'
+      }
+
+      let listItemsByTag = document.getElementsByTagName("li")
+
+      for(const item of listItemsByTag){
+        item.style.backgroundColor = 'aquamarine'
+      }
+    </script>
+  </body>
+</html>

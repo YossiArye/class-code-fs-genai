@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <form action="">
+        <div>
+            <label for="name">Name</label>
+            <input type="text" id="name">
+        </div>
+        <div>
+            <label for="email">Email</label>
+            <input type="email" id="email">
+        </div>
+
+        <!-- <input type="button" value="Roei" id="button" onclick="buttonPressed()"> -->
+        <input type="button" value="Roei" id="button">
+    </form> 
+    <script>
+        function buttonPressed(){
+            alert("hello Roei")
+        }
+
+        //const obj = {
+        //    name: "Yossi",
+        //    addEventListener: function(){
+        //        console.log("hjvbhjbfhjrbfhjb")
+        //    }
+        //}
+
+        //obj.addEventListener()
+
+
+        document.getElementById("button").addEventListener("mouseleave", buttonPressed)
+
+    </script>
+</body> 
+</html>
