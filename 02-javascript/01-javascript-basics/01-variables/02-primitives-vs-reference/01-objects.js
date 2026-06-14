@@ -7,7 +7,7 @@ console.log("a", a)//12
 const obj = {
     name: "Yossi",
     age: 35,
-    isSingle: true
+    isSingle: true,
 }
 
 
