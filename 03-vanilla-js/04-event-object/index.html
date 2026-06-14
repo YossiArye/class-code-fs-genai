@@ -6,7 +6,7 @@
     <title>Document</title>
 </head>
 <body>
-    <form action="">
+    <form action="" id="form">
         <div>
             <label for="name">Name</label>
             <input type="text" id="name">
@@ -19,6 +19,7 @@
         <!-- <input type="button" value="Roei" id="button" onclick="buttonPressed()"> -->
         <input type="button" value="Roei" id="button">
     </form> 
+    <div style="height: 255px; width: 255px" id="colored"></div>
     <script>
         function buttonPressed(){
             alert("hello Roei")
@@ -32,10 +33,45 @@
         //}
 
         //obj.addEventListener()
+        document.getElementById("colored").addEventListener("mousemove", function(e){
+            let red = e.clientX > 255 ? 255 : Math.abs(e.clientX)
+            let green = e.clientY > 255 ? 255 : Math.abs(e.clientY)
+            let blue = Math.abs(red - green)
 
+            let redElem = document.getElementById("redElem")
+            let greenElem = document.getElementById("greenElem")
+            let blueElem = document.getElementById("blueElem")
 
-        document.getElementById("button").addEventListener("mouseleave", buttonPressed)
-
+            if(!redElem){
+                redElem = document.createElement("div")
+                redElem.id = "redElem"
+                redElem.style.border = "5px solid red"
+                document.body.appendChild(redElem)
+                redElem.textContent = red
+            }else{
+                redElem.textContent = red
+            }
+            if(!greenElem){
+                greenElem = document.createElement("div")
+                greenElem.id = "greenElem"
+                greenElem.style.border = "5px solid green"
+                document.body.appendChild(greenElem)
+                greenElem.textContent = green
+            }else{
+                greenElem.textContent = green
+            }
+            if(!blueElem){
+                blueElem = document.createElement("div")
+                blueElem.id = "blueElem"
+                blueElem.style.border = "5px solid blue"
+                document.body.appendChild(blueElem)
+                blueElem.textContent = blue
+            }else{
+                blueElem.textContent = blue
+            }
+            this.style.backgroundColor = `rgb(${red}, ${green}, ${blue})`
+            
+        })
     </script>
 </body> 
 </html>
