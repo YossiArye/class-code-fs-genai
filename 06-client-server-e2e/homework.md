@@ -1,104 +1,137 @@
-# Homework — Client-Server E2E
+# Homework — Async Patterns: Callbacks, Promises, and allSettled
 
-> Based on: `06-client-server-e2e`
+> Based on: /Users/yossiarye/projects/workspace-class/class-code-fs-genai/06-client-server-e2e/client.js
 
 ---
 
-## Exercise 1 — Predict the Output
-**Type:** Predict
+## Exercise 1 — Callback Hell
 
-What does this code log to the console? Explain why.  
-Then write a one-line fix so the result is not empty.
+**Type:** Write from scratch
+
+The `client.js` you saw in class uses `async/await`. Your job is to rewrite the same logic using **nested callbacks** — no `async`, no `await`, no `.then()`.
+
+Use the helper below to convert `fetch` into a callback-style function:
 
 ```js
-const ids = ["2", "4"]
-const users = [
-  { id: 1, name: "Alice" },
-  { id: 2, name: "Bob" },
-  { id: 4, name: "Carol" }
+function fetchJSON(url, options, callback) {
+  fetch(url, options)
+    .then(res => res.json())
+    .then(data => callback(null, data))
+    .catch(err => callback(err, null))
+}
+```
+
+Wire up the `#btn` click listener so it:
+1. Calls `fetchJSON` to `GET http://localhost:3000/houses`
+2. Inside the callback, loops over each house and calls `fetchJSON` to `POST http://localhost:3000/bulk-politicians` with `house.politicians` as the body
+3. Inside each of those callbacks, logs the politicians data
+
+You should end up with callbacks nested inside callbacks inside a callback. That nesting is the whole point — this is **callback hell**.
+
+---
+
+## Exercise 2 — Then / Catch
+
+**Type:** Write from scratch
+
+Rewrite the `#btn` click listener using `.then().catch()` promise chaining. Rules:
+- No `async` keyword
+- No `await` keyword
+- Handle errors with `.catch()`
+
+The logic is identical to `client.js`:
+1. Fetch all houses
+2. Build an array of `POST /bulk-politicians` fetch requests — one per house
+3. Resolve them all with `Promise.all()`
+4. Resolve all `.json()` calls with a second `Promise.all()`
+5. Log the final politicians data
+
+```js
+document.getElementById('btn').addEventListener('click', (e) => {
+  // ??? your then/catch chain here
+})
+```
+
+---
+
+## Exercise 3 — Promise.allSettled
+
+**Type:** Write from scratch
+
+In `client.js`, both `Promise.all()` calls will **throw and stop everything** if even one request fails.
+
+Rewrite the async/await version replacing **both** `Promise.all()` calls with `Promise.allSettled()`.
+
+Important: `allSettled` does not give you values directly. It gives you an array of result objects:
+```js
+[
+  { status: 'fulfilled', value: <the response> },
+  { status: 'rejected',  reason: <the error>  },
 ]
-const result = users.filter(u => ids.includes(u.id))
-console.log(result)
 ```
+
+After each `allSettled`, filter out the rejected ones and continue with only the fulfilled values. Log a warning for each rejected request.
 
 ---
 
-## Exercise 2 — Fix the Bug
-**Type:** Fix
+## Exercise 4 — Predict the Output
 
-The server below crashes when a POST request arrives. Find and fix the bug.
+**Type:** Predict the output
 
-```js
-import express from 'express'
-const app = express()
-
-app.post('/search', (req, res) => {
-  const { name } = req.body
-  res.json({ found: name })
-})
-
-app.listen(3000)
-```
-
----
-
-## Exercise 3 — Fill in the Blanks
-**Type:** Fill
-
-Add a new `GET /roles` route to the server. It should read `./db/roles.json` from disk and return it as JSON. Fill in every `// ???`.
+What does the following code log to the console? Write your answer before running it.
 
 ```js
-app.___('/roles', async (req, res) => {
-  try {
-    const raw = await fs.readFile(// ???)
-    const roles = JSON.___(raw)
-    res.___(roles)
-  } catch (error) {
-    console.error(error.message)
-    res.status(500).send('Internal server error')
-  }
+const p1 = Promise.resolve({ id: 1, name: 'Alice' })
+const p2 = Promise.reject(new Error('Network timeout'))
+const p3 = Promise.resolve({ id: 3, name: 'Bob' })
+
+Promise.allSettled([p1, p2, p3]).then(results => {
+  results.forEach(result => {
+    if (result.status === 'fulfilled') {
+      console.log('OK:', result.value.name)
+    } else {
+      console.log('FAILED:', result.reason.message)
+    }
+  })
 })
 ```
 
----
-
-## Exercise 4 — Write from Scratch
-**Type:** Write
-
-Given this HTML:
-
-```html
-<input type="text" id="city-input" placeholder="Enter a city" />
-<button id="weather-btn">Get Weather</button>
-<div id="weather-result"></div>
-<script src="client.js"></script>
-```
-
-Write the `client.js` that:
-1. Listens for a click on `#weather-btn` and prevents page refresh.
-2. Reads the value from `#city-input`.
-3. POSTs `{ "city": value }` as JSON to `http://localhost:3000/weather`.
-4. Awaits the JSON response and displays it (with `JSON.stringify`) inside `#weather-result`.
-5. Wraps everything in `try/catch` and logs errors.
+What would happen if you replaced `Promise.allSettled` with `Promise.all`? Explain the difference in one sentence.
 
 ---
 
 ## Exercise 5 — Fix the Bug
-**Type:** Fix
 
-A student wrote this client-side code to send selected product IDs to the server, but `req.body` always arrives as `undefined`. Find **both** bugs and fix them.
+**Type:** Fix the bug
+
+The code below is supposed to fetch a list of products, then for each product fetch its details, and finally log all the details. It has **two bugs**. Find and fix them.
 
 ```js
-document.getElementById('order-btn').addEventListener('click', async (e) => {
-  e.preventDefault()
-  const selectedIds = [3, 7, 12]
-
-  const res = await fetch('http://localhost:3000/order', {
-    method: 'POST',
-    body: { ids: selectedIds }
+document.getElementById('load-btn').addEventListener('click', (e) => {
+  fetch('http://localhost:3000/products', {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
   })
-
-  const data = await res.json()
-  document.getElementById('confirmation').textContent = JSON.stringify(data)
+    .then(res => {
+      res.json()  // bug 1
+    })
+    .then(products => {
+      const requests = products.map(product =>
+        fetch(`http://localhost:3000/products/${product.id}`)
+      )
+      return Promise.all(requests)
+    })
+    .then(responses => {
+      return Promise.all(responses.map(r => r.json()))
+    })
+    .then(details => {
+      console.log('All product details:', details)
+    })
+    .catch(err => {
+      console.error(err.message)  // bug 2 — what if err has no message?
+    })
 })
 ```
+
+Hint for bug 1: `.then()` chains only pass values forward if you **return** them.
+Hint for bug 2: Think about what you should log to make sure you always see something useful, even if `err.message` is undefined.

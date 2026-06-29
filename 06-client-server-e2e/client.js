@@ -1,5 +1,7 @@
 document.getElementById("btn").addEventListener("click", async (e) => {
   try {
+    const finalData = []
+
     console.log({
       message: "Trying to get houses from server",
       elemId: "btn",
@@ -15,12 +17,15 @@ document.getElementById("btn").addEventListener("click", async (e) => {
       message: "Successfully got houses from server",
       elemId: "btn",
       event: "click",
-      data: houses
+      data: houses,
     })
-  
-    const requestsArr = []
+
+    const politiciansRequestsArr = []
     for (const house of houses) {
-      requestsArr.push(
+      const { name: houseName } = house
+      finalData.push({ houseName })
+
+      politiciansRequestsArr.push(
         fetch("http://localhost:3000/bulk-politicians", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -29,14 +34,15 @@ document.getElementById("btn").addEventListener("click", async (e) => {
       )
     }
 
-     console.log({
+    console.log(finalData)
+
+    console.log({
       message: "Trying to get politicians from server",
       elemId: "btn",
       event: "click",
     })
 
-    const politiciansHeaders = await Promise.all(requestsArr)
-    
+    const politiciansHeaders = await Promise.all(politiciansRequestsArr)
 
     const politiciansBodyReq = []
     for (const politicianHeader of politiciansHeaders) {
@@ -49,8 +55,50 @@ document.getElementById("btn").addEventListener("click", async (e) => {
       message: "Successfully got politicians from server",
       elemId: "btn",
       event: "click",
-      data: politiciansResponse
+      data: politiciansResponse,
     })
+
+    const rolesToFetch = []
+    for (const politiciansArrIndex in politiciansResponse) {
+      finalData[politiciansArrIndex].politicians =
+        politiciansResponse[politiciansArrIndex]
+      for (const politician of politiciansResponse[politiciansArrIndex]) {
+        if (!rolesToFetch.includes(politician.role)) {
+          rolesToFetch.push(politician.role)
+        }
+      }
+    }
+
+    console.log(finalData)
+
+    console.log({
+      message: "Trying to get roles from server",
+      elemId: "btn",
+      event: "click",
+    })
+
+    const rolesHeaders = await fetch("http://localhost:3000/bulk-roles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(rolesToFetch),
+    })
+
+    const roles = await rolesHeaders.json()
+
+    console.log({
+      message: "Successfully got roles from server",
+      elemId: "btn",
+      event: "click",
+      data: roles,
+    })
+
+    for (const houseData of finalData) {
+      for (const politician of houseData.politicians) {
+        politician.role = roles.find((role) => role.id === politician.role)
+      }
+    }
+
+    console.log(finalData)
   } catch (error) {
     console.error({ data: error.message })
   }

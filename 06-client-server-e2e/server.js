@@ -50,13 +50,13 @@ app.get("/houses", async (req, res) => {
   }
 })
 
-app.get("/role/:id", async (req, res) => {
+app.put("/role/:id", async (req, res) => {
   try {
     const roleId = req.params.id
     console.log({
       message: "Trying to fetch roles from the db",
       endpoint: "/role/:id",
-      roleId
+      roleId,
     })
     const stringifyRoles = await fs.readFile(`${__dirname}/db/roles.json`)
 
@@ -67,12 +67,124 @@ app.get("/role/:id", async (req, res) => {
       data: roles,
     })
     const role = roles.find((role) => role.id == roleId)
-    console.log({
-      message: "Trying to send a specific role to the client",
+    if (!role) {
+      return res.status(404).send("Role not found")
+    }
+    // console.log({
+    //   message: "Trying to send a specific role to the client",
+    //   endpoint: "/role/:id",
+    //   role,
+    // })
+
+    const newRoles = roles.map((item) =>
+      item.id == role.id
+        ? {
+            id: role.id,
+            ...req.body,
+          }
+        : item,
+    )
+
+    await fs.writeFile(
+      `${__dirname}/db/roles.json`,
+      JSON.stringify(newRoles, null, 2),
+    )
+    res.json(newRoles)
+  } catch (error) {
+    console.error({
+      message: "Failed to fetch roles from the db",
       endpoint: "/role/:id",
-      role,
+      errorMsg: err.message,
     })
-    res.json(role)
+    res.status(500).send("Internal server error")
+  }
+})
+
+app.patch("/role/:id", async (req, res) => {
+  try {
+    const roleId = req.params.id
+    console.log({
+      message: "Trying to fetch roles from the db",
+      endpoint: "/role/:id",
+      roleId,
+    })
+    const stringifyRoles = await fs.readFile(`${__dirname}/db/roles.json`)
+
+    const roles = JSON.parse(stringifyRoles)
+    console.log({
+      message: "Successfully fetched roles from the db",
+      endpoint: "/role/:id",
+      data: roles,
+    })
+    const role = roles.find((role) => role.id == roleId)
+    if (!role) {
+      return res.status(404).send("Role not found")
+    }
+    // console.log({
+    //   message: "Trying to send a specific role to the client",
+    //   endpoint: "/role/:id",
+    //   role,
+    // })
+
+    const newRoles = roles.map((item) =>
+      item.id == role.id
+        ? {
+            ...role,
+            ...req.body,
+          }
+        : item,
+    )
+
+    await fs.writeFile(
+      `${__dirname}/db/roles.json`,
+      JSON.stringify(newRoles, null, 2),
+    )
+    res.json(newRoles)
+  } catch (error) {
+    console.error({
+      message: "Failed to fetch roles from the db",
+      endpoint: "/role/:id",
+      errorMsg: err.message,
+    })
+    res.status(500).send("Internal server error")
+  }
+})
+
+app.delete("/role/:id", async (req, res) => {
+  try {
+    const roleId = req.params.id
+    console.log({
+      message: "Trying to fetch roles from the db",
+      endpoint: "/role/:id",
+      roleId,
+    })
+    const stringifyRoles = await fs.readFile(`${__dirname}/db/roles.json`)
+
+    const roles = JSON.parse(stringifyRoles)
+    console.log({
+      message: "Successfully fetched roles from the db",
+      endpoint: "/role/:id",
+      data: roles,
+    })
+    const role = roles.find((role) => role.id == roleId)
+    if (!role) {
+      return res.status(404).send("Role not found")
+    }
+    // console.log({
+    //   message: "Trying to send a specific role to the client",
+    //   endpoint: "/role/:id",
+    //   role,
+    // })
+
+    const newRoles = roles.filter((item) =>
+      item.id !== role.id
+    )
+
+    await fs.writeFile(
+      `${__dirname}/db/roles.json`,
+      JSON.stringify(newRoles, null, 2),
+    )
+    res.json(newRoles)
   } catch (error) {
     console.error({
       message: "Failed to fetch roles from the db",
@@ -93,7 +205,7 @@ app.post("/bulk-politicians", async (req, res) => {
       `${__dirname}/db/politicians.json`,
     )
     const politicians = JSON.parse(stringifyPoliticians)
-      console.log({
+    console.log({
       message: "Successfully fetched politicians from the db",
       endpoint: "/bulk-politicians",
       data: politicians,
@@ -106,6 +218,33 @@ app.post("/bulk-politicians", async (req, res) => {
     console.error({
       message: "Failed to fetch politicians from the db",
       endpoint: "/bulk-politicians",
+      errorMsg: err.message,
+    })
+    res.status(500).send("Internal server error")
+  }
+})
+
+app.post("/bulk-roles", async (req, res) => {
+  try {
+    console.log({
+      message: "Trying to fetch roles from the db",
+      endpoint: "/bulk-roles",
+    })
+    const stringifyRoles = await fs.readFile(`${__dirname}/db/roles.json`)
+    const roles = JSON.parse(stringifyRoles)
+    console.log({
+      message: "Successfully fetched roles from the db",
+      endpoint: "/bulk-roles",
+      data: roles,
+    })
+    const rolesFilter = req.body.map(Number)
+    console.log(rolesFilter)
+    const response = roles.filter((role) => rolesFilter.includes(role.id))
+    res.json(response)
+  } catch (err) {
+    console.error({
+      message: "Failed to fetch roles from the db",
+      endpoint: "/bulk-roles",
       errorMsg: err.message,
     })
     res.status(500).send("Internal server error")
