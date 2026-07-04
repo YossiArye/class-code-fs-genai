@@ -1,0 +1,37 @@
+[
+    {
+        "id": 1,
+        "email": "george.bluth@gmail.com",
+        "first_name": "George",
+        "last_name": "Bluth",
+        "role": 3
+    },
+    {
+        "id": 2,
+        "email": "jd.vance@gmail.com",
+        "first_name": "JD",
+        "last_name": "Vance",
+        "role": 2
+    },
+    {
+        "id": 3,
+        "email": "marco.rubio@gmail.com",
+        "first_name": "Marco",
+        "last_name": "Rubio",
+        "role": 2
+    },
+    {
+        "id": 4,
+        "email": "pete.hegthet@gmail.com",
+        "first_name": "Pete",
+        "last_name": "Hegthet",
+        "role": 2
+    },
+    {
+        "id": 5,
+        "email": "donald.trump@gmail.com",
+        "first_name": "Donald J",
+        "last_name": "Trump",
+        "role": 1
+    }
+]
