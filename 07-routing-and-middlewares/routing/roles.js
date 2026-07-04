@@ -1,6 +1,5 @@
-import express from "express"
+import { Router } from 'express'
 import fs from "fs/promises"
-import cors from "cors"
 
 import { fileURLToPath } from "url"
 import path from "path"
@@ -8,52 +7,37 @@ import path from "path"
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-const app = express()
-app.use(cors())
-app.use(express.json())
+const router = Router()
 
-app.get("/", async (req, res) => {
-  try {
-    const stringifyPoliticians = await fs.readFile(
-      `${__dirname}/db/politicians.json`,
-    )
-    const politicians = JSON.parse(stringifyPoliticians)
-    res.json(politicians)
-  } catch (error) {
-    console.error(error.message)
-    res.status(500).send("Internal server error")
-  }
-})
-
-
-
-app.get("/houses", async (req, res) => {
+//http://localhost:4000/roles/bulk
+router.post("/bulk", async (req, res) => {
   try {
     console.log({
-      message: "Trying to fetch houses from the db",
-      endpoint: "/houses",
+      message: "Trying to fetch roles from the db",
+      endpoint: "/bulk",
     })
-    const stringifyHouses = await fs.readFile(`${__dirname}/db/houses.json`)
-
-    const houses = JSON.parse(stringifyHouses)
+    const stringifyRoles = await fs.readFile(`${__dirname}/../db/roles.json`)
+    const roles = JSON.parse(stringifyRoles)
     console.log({
-      message: "Successfully fetched houses from the db",
-      endpoint: "/houses",
-      data: houses,
+      message: "Successfully fetched roles from the db",
+      endpoint: "/bulk",
+      data: roles,
     })
-    res.json(houses)
-  } catch (error) {
+    const rolesFilter = req.body.map(Number)
+    console.log(rolesFilter)
+    const response = roles.filter((role) => rolesFilter.includes(role.id))
+    res.json(response)
+  } catch (err) {
     console.error({
-      message: "Failed to fetch houses from the db",
-      endpoint: "/bulk-politicians",
+      message: "Failed to fetch roles from the db",
+      endpoint: "/bulk",
       errorMsg: err.message,
     })
     res.status(500).send("Internal server error")
   }
 })
 
-
-app.put("/role/:id", async (req, res) => {
+router.put("/:id", async (req, res) => {
   try {
     const roleId = req.params.id
     console.log({
@@ -61,7 +45,7 @@ app.put("/role/:id", async (req, res) => {
       endpoint: "/role/:id",
       roleId,
     })
-    const stringifyRoles = await fs.readFile(`${__dirname}/db/roles.json`)
+    const stringifyRoles = await fs.readFile(`${__dirname}/../db/roles.json`)
 
     const roles = JSON.parse(stringifyRoles)
     console.log({
@@ -103,7 +87,7 @@ app.put("/role/:id", async (req, res) => {
   }
 })
 
-app.patch("/role/:id", async (req, res) => {
+router.patch("/:id", async (req, res) => {
   try {
     const roleId = req.params.id
     console.log({
@@ -111,7 +95,7 @@ app.patch("/role/:id", async (req, res) => {
       endpoint: "/role/:id",
       roleId,
     })
-    const stringifyRoles = await fs.readFile(`${__dirname}/db/roles.json`)
+    const stringifyRoles = await fs.readFile(`${__dirname}/../db/roles.json`)
 
     const roles = JSON.parse(stringifyRoles)
     console.log({
@@ -139,7 +123,7 @@ app.patch("/role/:id", async (req, res) => {
     )
 
     await fs.writeFile(
-      `${__dirname}/db/roles.json`,
+      `${__dirname}/../db/roles.json`,
       JSON.stringify(newRoles, null, 2),
     )
     res.json(newRoles)
@@ -153,7 +137,8 @@ app.patch("/role/:id", async (req, res) => {
   }
 })
 
-app.delete("/role/:id", async (req, res) => {
+//http://localhost:4000/roles/bulk
+router.delete("/:id", async (req, res) => {
   try {
     const roleId = req.params.id
     console.log({
@@ -161,7 +146,7 @@ app.delete("/role/:id", async (req, res) => {
       endpoint: "/role/:id",
       roleId,
     })
-    const stringifyRoles = await fs.readFile(`${__dirname}/db/roles.json`)
+    const stringifyRoles = await fs.readFile(`${__dirname}/../db/roles.json`)
 
     const roles = JSON.parse(stringifyRoles)
     console.log({
@@ -184,7 +169,7 @@ app.delete("/role/:id", async (req, res) => {
     )
 
     await fs.writeFile(
-      `${__dirname}/db/roles.json`,
+      `${__dirname}/../db/roles.json`,
       JSON.stringify(newRoles, null, 2),
     )
     res.json(newRoles)
@@ -199,62 +184,5 @@ app.delete("/role/:id", async (req, res) => {
 })
 
 
-app.post("/bulk-politicians", async (req, res) => {
-  try {
-    console.log({
-      message: "Trying to fetch politicians from the db",
-      endpoint: "/bulk-politicians",
-    })
-    const stringifyPoliticians = await fs.readFile(
-      `${__dirname}/db/politicians.json`,
-    )
-    const politicians = JSON.parse(stringifyPoliticians)
-    console.log({
-      message: "Successfully fetched politicians from the db",
-      endpoint: "/bulk-politicians",
-      data: politicians,
-    })
-    const usersFilter = req.body.map(Number)
-    console.log(usersFilter)
-    const response = politicians.filter((user) => usersFilter.includes(user.id))
-    res.json(response)
-  } catch (err) {
-    console.error({
-      message: "Failed to fetch politicians from the db",
-      endpoint: "/bulk-politicians",
-      errorMsg: err.message,
-    })
-    res.status(500).send("Internal server error")
-  }
-})
 
-app.post("/bulk-roles", async (req, res) => {
-  try {
-    console.log({
-      message: "Trying to fetch roles from the db",
-      endpoint: "/bulk-roles",
-    })
-    const stringifyRoles = await fs.readFile(`${__dirname}/db/roles.json`)
-    const roles = JSON.parse(stringifyRoles)
-    console.log({
-      message: "Successfully fetched roles from the db",
-      endpoint: "/bulk-roles",
-      data: roles,
-    })
-    const rolesFilter = req.body.map(Number)
-    console.log(rolesFilter)
-    const response = roles.filter((role) => rolesFilter.includes(role.id))
-    res.json(response)
-  } catch (err) {
-    console.error({
-      message: "Failed to fetch roles from the db",
-      endpoint: "/bulk-roles",
-      errorMsg: err.message,
-    })
-    res.status(500).send("Internal server error")
-  }
-})
-
-app.listen(3000, () => {
-  console.log("Server is listening on port 3000")
-})
+export default router
