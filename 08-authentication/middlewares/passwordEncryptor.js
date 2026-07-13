@@ -4,8 +4,8 @@ import { hash, genSalt } from "bcryptjs"
 
 export default async(req, res, next) => {
     try {
-        res.locals.salt = await genSalt()
-        res.locals.hash = await hash(req.body.password, res.locals.salt)
+        const salt = await genSalt()
+        res.locals.hash = await hash(req.body.password + process.env.PEPPER, salt)
         next()
     } catch (error) {
         console.log(error)
