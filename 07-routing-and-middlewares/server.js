@@ -1,8 +1,7 @@
 import express from "express"
 import cors from "cors"
 
-import { fileURLToPath } from "url"
-import path from "path"
+
 
 
 import housesRouter from './routing/houses.js'
@@ -12,7 +11,8 @@ import auth from './middlewares/auth.js'
 import logger from './middlewares/logger.js'
 
 
-
+import { fileURLToPath } from "url"
+import path from "path"
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
