@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename)
 
 
 import jwtMW from '../middlewares/jwtMW.js'
+import jwtSuperAdmin from '../middlewares/jwtSuperAdmin.js'
 
 const router = Router()
 
@@ -92,7 +93,7 @@ router.put("/:id", async (req, res) => {
   }
 })
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", jwtMW, async (req, res) => {
   try {
     const roleId = req.params.id
     console.log({
@@ -143,7 +144,7 @@ router.patch("/:id", async (req, res) => {
 })
 
 //http://localhost:4000/roles/bulk
-router.delete("/:id", jwtMW, async (req, res) => {
+router.delete("/:id", jwtSuperAdmin, async (req, res) => {
   try {
     const roleId = req.params.id
     console.log({
