@@ -20,10 +20,10 @@ export default async (req, res, next) => {
       const { email } = decoded
       const users = JSON.parse(await fs.readFile(usersFilePath))
       const user = users.find((user) => user.email === email)
-      if(user){
+      if(user && user.super_admin){
         next()
       }else{
-        return res.status(401).send('User not exists')
+        return res.status(401).send('User not authorized')
       }
     }
   })

@@ -23,10 +23,8 @@ app.use('/houses', housesRouter)
 app.use('/politicians', politiciansRouter)
 app.use('/roles', rolesRouter)
 
-app.use(isEmailExists)
 
-
-app.post('/register', passwordEncryptor, async (req, res) => {
+app.post('/register', isEmailExists, passwordEncryptor, async (req, res) => {
     try {
         const users = res.locals.users
         const user = {
@@ -38,10 +36,10 @@ app.post('/register', passwordEncryptor, async (req, res) => {
 
         
 
-        const { first_name : firstName, last_name : lastName, email} = user
+        const { email} = user
 
         jwt.sign(
-            {firstName, lastName, email},
+            {email},
             process.env.ACCESS_TOKEN_SECRET,
             { expiresIn: '60s'},
             async (err, accessToken) => {
@@ -62,8 +60,27 @@ app.post('/register', passwordEncryptor, async (req, res) => {
 })
 
 
-app.post('/login', passwordDecriptor, (req, res) => {
-    res.send("Login Successfully")
+app.post('/login', isEmailExists, passwordDecriptor, (req, res) => {
+ try {
+        const {email} = req.body
+
+        jwt.sign(
+            {email},
+            process.env.ACCESS_TOKEN_SECRET,
+            { expiresIn: '60s'},
+            async (err, accessToken) => {
+                if(err){
+                    console.log(err.message)
+                    throw new Error('Failed to have token')
+                }else{
+                    res.send({accessToken})
+                }
+            }
+        )
+    } catch (error) {
+        console.log(error.message)
+        res.status(500).send('Internal server error')
+    }
 })
 
 app.listen(3000, () => {
