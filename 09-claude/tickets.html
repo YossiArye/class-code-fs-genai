@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Review</title>
+    <style>
+        .ticket {
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px;
+            background-color: white;
+        }
+
+        .ticket.approve {
+            background-color: lightgreen;
+        }
+
+        .ticket.deny {
+            background-color: lightcoral;
+        }
+
+        .ticket.doubt {
+            background-color: khaki;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="tickets"></div>
+
+    <script>
+        const TITLES = [
+            "Session timeout too aggressive",
+            "Add pagination to search results",
+            "Cart total miscalculates with coupons",
+            "Support dark mode in email templates",
+            "Duplicate notifications on retry",
+            "Add bulk delete for admin panel",
+            "Video upload fails over 50MB",
+            "Improve error message on invalid input",
+            "Add keyboard shortcuts for power users",
+            "Memory leak in websocket connection"
+        ]
+
+        function pickRandomTitles(count) {
+            const shuffled = [...TITLES].sort(() => Math.random() - 0.5)
+            return shuffled.slice(0, count)
+        }
+
+        function setStatus(ticket, status) {
+            ticket.classList.remove("approve", "deny", "doubt")
+            ticket.classList.add(status)
+        }
+
+        function createTicket(number, title) {
+            const ticket = document.createElement("div")
+            ticket.className = "ticket"
+
+            const heading = document.createElement("h3")
+            heading.textContent = `Ticket #${number}: ${title}`
+            ticket.appendChild(heading)
+
+            const approveButton = document.createElement("button")
+            approveButton.textContent = "Approve"
+            approveButton.addEventListener("click", () => setStatus(ticket, "approve"))
+            ticket.appendChild(approveButton)
+
+            const denyButton = document.createElement("button")
+            denyButton.textContent = "Deny"
+            denyButton.addEventListener("click", () => setStatus(ticket, "deny"))
+            ticket.appendChild(denyButton)
+
+            const doubtButton = document.createElement("button")
+            doubtButton.textContent = "Doubt"
+            doubtButton.addEventListener("click", () => setStatus(ticket, "doubt"))
+            ticket.appendChild(doubtButton)
+
+            return ticket
+        }
+
+        const container = document.getElementById("tickets")
+        const chosenTitles = pickRandomTitles(6)
+        chosenTitles.forEach((title, index) => {
+            container.appendChild(createTicket(index + 1, title))
+        })
+    </script>
+</body>
+
+</html>
