@@ -45,7 +45,7 @@ app.get("/houses", async (req, res) => {
   } catch (error) {
     console.error({
       message: "Failed to fetch houses from the db",
-      endpoint: "/bulk-politicians",
+      endpoint: "/houses",
       errorMsg: err.message,
     })
     res.status(500).send("Internal server error")
