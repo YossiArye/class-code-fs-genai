@@ -1,4 +1,13 @@
 <!DOCTYPE html>
+<!--
+    Ticket Review demo page.
+
+    On every page load, 6 random ticket titles are picked from a fixed list
+    and rendered as ticket cards. Each card has three buttons — Approve,
+    Deny, Doubt — and clicking one colors the card (green / red / yellow)
+    by swapping a CSS class on it. Everything runs in the browser; there is
+    no server and nothing is saved between reloads.
+-->
 <html lang="en">
 
 <head>
@@ -6,6 +15,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ticket Review</title>
     <style>
+        /* Base look of every ticket card */
         .ticket {
             border: 1px solid #333;
             border-radius: 8px;
@@ -14,6 +24,7 @@
             background-color: white;
         }
 
+        /* Status colors — one of these classes is added when a button is clicked */
         .ticket.approve {
             background-color: lightgreen;
         }
@@ -32,6 +43,7 @@
     <div id="tickets"></div>
 
     <script>
+        // Pool of possible ticket titles — 6 are picked at random each load
         const TITLES = [
             "Session timeout too aggressive",
             "Add pagination to search results",
@@ -45,16 +57,19 @@
             "Memory leak in websocket connection"
         ]
 
+        // Shuffle the titles and return the first `count` of them
         function pickRandomTitles(count) {
             const shuffled = [...TITLES].sort(() => Math.random() - 0.5)
             return shuffled.slice(0, count)
         }
 
+        // Set a ticket's status: clear any previous status class, then add the new one
         function setStatus(ticket, status) {
             ticket.classList.remove("approve", "deny", "doubt")
             ticket.classList.add(status)
         }
 
+        // Build one ticket card: a heading plus the three status buttons
         function createTicket(number, title) {
             const ticket = document.createElement("div")
             ticket.className = "ticket"
@@ -81,6 +96,7 @@
             return ticket
         }
 
+        // Entry point: pick 6 random titles and render a ticket card for each
         const container = document.getElementById("tickets")
         const chosenTitles = pickRandomTitles(6)
         chosenTitles.forEach((title, index) => {
