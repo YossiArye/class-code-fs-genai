@@ -731,6 +731,8 @@ Some settings live in environment variables (system-level configuration outside 
 
 You set them in your shell's config (`.zshrc`, `.bashrc`, etc.) or pass them when running Claude.
 
+⚠️ *Which* config file your shell actually reads is a classic trap — for example, bash login shells on macOS read `~/.bash_profile`, **not** `~/.bashrc`. Lesson 9 covers this in depth ("Storing tokens safely — the shell config trap").
+
 ## Quiz — Lesson 7
 
 1. There are three settings files. Give the exact path of each and explain what each one controls. Which one is automatically gitignored?
@@ -1025,6 +1027,62 @@ A typical `.mcp.json` looks like:
 }
 ```
 
+## Storing tokens safely — the shell config trap
+
+Look at the example above — the token is written directly into the file: `"GITHUB_TOKEN": "your-token-here"`. For project scope that's a real problem: `.mcp.json` is committed to git and shared with your team, so your secret token gets shared too (and pushed to GitHub).
+
+The right way: keep the token in an **environment variable**, and reference it from `.mcp.json` with `${...}`:
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": {
+        "Authorization": "Bearer ${GITHUB_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+Claude Code expands `${GITHUB_TOKEN}` when it starts, reading the value from its own environment. The file itself contains no secret — safe to commit.
+
+### Where does the environment variable come from?
+
+You put an export line in your shell's startup file:
+
+```bash
+export GITHUB_TOKEN=github_pat_xxxxxxxxxxxx
+```
+
+But **which file?** This is where almost everyone gets burned. Different shells read different files:
+
+| Shell | Startup files it reads |
+|---|---|
+| **zsh** (macOS default) | `~/.zshenv` (always), `~/.zshrc` (interactive) |
+| **bash** — login shell (macOS Terminal.app windows) | `~/.bash_profile` — **not** `.bashrc`! |
+| **bash** — non-login interactive shell | `~/.bashrc` |
+
+The classic Mac trap: your default shell is zsh, so you put the token in `~/.zshrc` — but your VS Code integrated terminal is configured to run **bash**. Bash never reads any zsh file. You launch `claude` from that terminal → the variable doesn't exist → `${GITHUB_TOKEN}` expands to nothing → the MCP server fails to authenticate. And you sit there insisting "but the token is definitely in my `.zshrc`!" — which is true, and irrelevant.
+
+**The safe move: put the same export line in all three** — `~/.zshenv`, `~/.bash_profile`, and `~/.bashrc`. One line each, and every shell on your machine finds the token no matter how it was started.
+
+### Three rules that save hours of debugging
+
+1. **Environment is inherited at launch — once.** When you run `claude`, it gets a *copy* of the launching shell's variables at that moment. Editing a config file changes nothing for shells and Claude sessions that are already open. After editing: open a **new** terminal (or run `source ~/.bash_profile` in the current one), then **restart** `claude`. Reconnecting via `/mcp` isn't enough — the running process's environment never changes.
+
+2. **Verify before launching.** In the terminal where you're about to run `claude`:
+
+   ```bash
+   echo ${GITHUB_TOKEN:+found}
+   ```
+
+   Prints `found` → this shell has the token. Prints nothing → it doesn't, and any `claude` you launch from here won't have it either.
+
+3. **Check the connection from outside.** Run `claude mcp list` — it starts a *fresh* process and shows every server's health (`✔ Connected` / `✘ Failed`). If `claude mcp list` connects but your open session doesn't, the session was started with a stale environment — restart it.
+
 ## Sandboxing — why MCP is safer than just letting Claude run anything
 
 When you give Claude access to a tool through MCP, the tool runs in its own isolated process. It only does what the MCP server explicitly exposes — no more, no less.
@@ -1225,6 +1283,14 @@ Type `/permissions` mid-session to see and manage every rule — what's allowed,
 
 **To add a rule without hand-editing `settings.json`:** open `/permissions`, choose **"Add a new rule..."**, pick the type (**Allow** = auto-approve, **Deny** = always block, **Ask** = force a confirmation even if an allow rule would otherwise match), then enter the pattern — e.g. `Bash(npm test:*)`, `Bash(git push:*)`, `Read(./.env)`. Claude Code writes it into the right `settings.json` for you.
 
+## When do `settings.json` changes actually take effect?
+
+Permission config loads at **session startup** — Claude Code doesn't watch `.claude/settings.json` for live changes while a session is already running. If you create or edit the file *after* a session has started, that session keeps operating on whatever permission state existed when it launched. The new or changed rule sits in the file correctly, but nothing in the running session has read it.
+
+This has a sneaky failure mode. Claude can still *look* like it's honoring a rule it never actually loaded — it can read the file itself and voluntarily choose not to run a matching command, purely on its own judgment. That looks identical to real enforcement, right up until you phrase the same request more insistently and Claude complies anyway, because nothing was actually blocking it at the tool-permission level in the first place. A genuinely loaded `deny` rule can't be talked past no matter how the request is worded — the block happens before Claude has any say in it, not because Claude decided to comply.
+
+**Rule of thumb:** after creating or editing `.claude/settings.json`, start a fresh session before trusting any rule in it — especially a `deny` rule you're relying on for safety. Don't mistake "Claude complied with the rule once" for "the rule is enforced."
+
 ## How modes and rules work together
 
 Imagine you set the mode to `acceptEdits` so Claude can edit files freely. But you also wrote a deny rule: `"deny": ["Bash(git push:*)"]`.
@@ -1253,6 +1319,8 @@ Regardless of mode (except `bypassPermissions`), writes to a small set of sensit
 
 5. What does `dontAsk` mode do when Claude tries an action that isn't on the approved list?
 
+6. You add a new `deny` rule to `.claude/settings.json` while a Claude Code session is already running. You ask Claude to run the now-denied command and it refuses, explaining that the command matches your deny rule. Is that proof the rule is actually being enforced? Why or why not — and what would actually prove it?
+
 ## Ideal Answers — Lesson 11
 
 1. Mode: **`plan`**. Two ways to switch: (a) press **`Shift+Tab`** during a session to cycle modes, (b) start Claude with the flag: **`claude --permission-mode plan`**.
@@ -1264,6 +1332,8 @@ Regardless of mode (except `bypassPermissions`), writes to a small set of sensit
 4. Key: **`permissions.defaultMode`**. Two files: **`~/.claude/settings.json`** (applies to every project on your machine, just for you) and **`.claude/settings.json`** (inside a project folder, applies only to that project, typically shared with teammates).
 
 5. In `dontAsk` mode, Claude **never asks**. If an action isn't on the pre-approved list, it's **automatically denied** with no prompt.
+
+6. **No — not proof by itself.** Permission config loads at session startup; a rule added mid-session isn't loaded into that session's enforcement state yet. Claude refusing and citing the rule can just be Claude reading the file and voluntarily choosing to comply — which is easy to mistake for real enforcement, but can be talked out of by asking more insistently, since nothing is actually blocking the tool call at the system level. **What would actually prove it:** start a fresh session (so the rule is loaded at startup this time) and try the same command again. A genuinely enforced deny rule produces a flat system-level denial no rephrasing can get around — not a reasoned, talkable-into-it refusal.
 
 ---
 
@@ -1797,13 +1867,63 @@ To see what's currently running (shells and subagents), use **`/tasks`**. (Note:
 
 ## Foreground vs background
 
-**Foreground** — runs in front of you. You see its work in the main conversation. Claude waits for it to finish.
+**Foreground** — runs in front of you. You see its work in the main conversation, and Claude waits for it to finish before doing anything else.
 
-**Background** — runs separately while you keep talking to Claude. You give Claude a different task; the background agent finishes on its own.
+**Background** — runs on its own while you keep talking to Claude. Claude stops waiting, and gets notified when the work completes.
 
-Send a running task to the background: **`Ctrl+B`**.
+### `Ctrl+B` — background a running command
 
-Kill all background subagents: **`Ctrl+X` then `Ctrl+K`** (press twice within 3 seconds to confirm).
+Press **`Ctrl+B`** to send a **running Bash command** to the background.
+
+**When it works:** only while a Bash command is actually executing.
+
+**When it does nothing:** while Claude is thinking, while Claude is writing its response, or at an idle prompt. There's no error and no message — the keypress is simply ignored. This is the number one reason people report "`Ctrl+B` is broken." It isn't; there was nothing running to background.
+
+**What it backgrounds:** the *command*, not Claude. Claude still handles one turn at a time, and anything you type mid-turn is **queued**, not run in parallel. `Ctrl+B` does not give you a second Claude.
+
+### Live demo
+
+Ask Claude to run something slow:
+
+```
+run ping -c 60 127.0.0.1
+```
+
+While it's running, press **`Ctrl+B`**. It detaches immediately:
+
+```
+Command was manually backgrounded by user with ID: bqrtlruk6
+Output is being written to: .../tasks/bqrtlruk6.output
+```
+
+Now ask Claude something unrelated — *"what's in this folder?"* — and it answers right away while the ping keeps counting.
+
+About a minute later, with no action from you, the result arrives on its own:
+
+```
+60 packets transmitted, 60 packets received, 0.0% packet loss
+```
+
+Backgrounding is **not** fire-and-forget: when the command finishes, Claude is notified automatically and reads the output. You don't poll and you don't open the file.
+
+### Running work in the background
+
+`Ctrl+B` is the escape hatch for something you already started. These are the deliberate ways:
+
+| Approach | How | What you get |
+|---|---|---|
+| **Ask upfront** | *"run the tests in the background"* | Claude starts it detached — best default, no keystroke |
+| **Subagents** | Claude delegates automatically | Background by default; real parallel work |
+| **Second session** | Open another terminal, run `claude` | Two genuinely independent Claudes |
+| **`claude --bg "prompt"`** | Starts a detached session | Manage it later with `claude agents` |
+
+Subagents are the important row: they are the only thing here that makes *Claude's own reasoning* run in parallel. Claude launches an `Explore` agent, keeps working, and collects the result when it lands.
+
+### Managing what's running
+
+**`/tasks`** — see everything in flight (background shells and subagents) plus their output.
+
+**Kill all background subagents:** `Ctrl+X` then `Ctrl+K` (press twice within 3 seconds to confirm).
 
 ## Creating your own agent
 
@@ -1919,7 +2039,7 @@ Report issues as a numbered list.
 
 1. What are the three built-in agents in Claude Code? For each, describe in one sentence what it does and what it's used for.
 
-2. You're running a long task and Claude launched an agent for it. You want to keep the agent working but chat with Claude about something else. What do you press?
+2. Claude is running `npm test` and it's taking four minutes. You want your prompt back so you can ask about something else. What do you press, and what exactly does it background — the command, or Claude itself? A classmate presses the same keys while Claude is *thinking* and reports "nothing happened." Why?
 
 3. You want to create a custom agent called `docs-writer` that can only read files (no editing, no bash). What is the exact file path you create, and write the frontmatter section showing `name`, `description`, and `tools`.
 
@@ -1931,7 +2051,7 @@ Report issues as a numbered list.
 
 1. **`Explore`** — read-only agent that reads files but cannot edit or run state-changing commands. Used for searching large codebases. **`Plan`** — designs an approach for complex tasks, writes up the plan, hands it back for approval before acting. **`general-purpose`** — the default, can read/edit/run anything. Used for complete subtasks end-to-end.
 
-2. **`Ctrl+B`** — sends the agent to the background. It keeps working while you talk to Claude about something else.
+2. **`Ctrl+B`** — it backgrounds the **command** (`npm test`), not Claude. The test keeps running, Claude stops waiting for it, your prompt frees up, and when the command finishes Claude is notified automatically and reads the output. The classmate saw nothing because **`Ctrl+B` only does something while a Bash command is actively executing** — while Claude is thinking there is nothing to background, so the keypress is silently ignored (no error, no message). Note also that backgrounding a command does *not* let you run a second prompt in parallel: Claude still handles one turn at a time, and anything typed mid-turn is queued. For real parallelism, use subagents (background by default), a second `claude` session, or `claude --bg`.
 
 3. Path: **`.claude/agents/docs-writer.md`** (a single markdown file, not a folder). Frontmatter:
    ```yaml

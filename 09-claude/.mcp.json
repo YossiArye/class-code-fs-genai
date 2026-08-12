@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/Users/yossiarye/projects/workspace-class/class-code-fs-genai/09-claude"
+      ]
+    }
+  }
+}
