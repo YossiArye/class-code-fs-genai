@@ -1,0 +1,40 @@
+{
+    "claude-haiku-4-5-20251001": {
+        "inputTokens": 524,
+        "outputTokens": 13,
+        "cacheReadInputTokens": 0,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.000589,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000,
+        "canonicalModel": "claude-haiku-4-5",
+        "provider": "firstParty"
+    },
+    "claude-sonnet-5": {
+        "inputTokens": 2,
+        "outputTokens": 158,
+        "cacheReadInputTokens": 34451,
+        "cacheCreationInputTokens": 0,
+        "webSearchRequests": 0,
+        "costUSD": 0.0127113,
+        "contextWindow": 1000000,
+        "maxOutputTokens": 64000,
+        "canonicalModel": "claude-sonnet-5",
+        "provider": "firstParty"
+    }
+},
+"permission_denials": [],
+"terminal_reason": "completed",
+"fast_mode_state": "off",
+"fast_mode_disabled_reason": "sdk_opt_in_required",
+"subtype": "success",
+"api_error_status": null,
+"result": "1. HTML stands for HyperText Markup Language, created by Tim Berners-Lee in 1991.\n2. HTML isn't a programming language — it's a markup language that structures content using elements and tags (e.g., `<p>`, `<div>`, `<img>`).\n3. The current standard is HTML5, which added native support for audio/video, semantic tags like `<article>` and `<nav>`, and the `<canvas>` element for graphics — without needing plugins like Flash.",
+"ttft_ms": 3359,
+"ttft_stream_ms": 1517,
+"time_to_request_ms": 26,
+"type": "result",
+"duration_ms": 3414,
+"uuid": "649a903e-b5e0-4084-83f7-e46113782597"
+}
