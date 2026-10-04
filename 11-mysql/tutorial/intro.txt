@@ -1,0 +1,15 @@
+• Installation: https://www.onlinetutorialspoint.com/mysql/install-mysql-on-windows-10-step-by-step.html
+• Run mysql from cmd: 
+    1. Search "mysql" and find mysql command line client
+    2. a. cd C:/"Program Files"/MySQL/"MySQL Server 8.0"/bin 
+       b. run ./mysql -u root -p
+    3. a. Add to env path C:\Program Files\MySQL\MySQL Server 8.0\bin 
+       b. Restart prompt 
+       c. run mysql -u root -p
+• Exit mysql from cmd: run exit;
+• DBMS - database management system, including sql and noSql.
+• RDBMS - relational atabase management system, including sql only.
+• SQL - structured query language, most common: MySql, SQL Server, Oracle
+• DML - Data Manipulation Language; select, update, insert, delete etc...
+• DDL - Data Definition Language; create, drop, alter etc...
+
