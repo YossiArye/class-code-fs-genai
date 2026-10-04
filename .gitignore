@@ -1,1 +1,4 @@
 node_modules/
+# Excluded from GitHub
+dist/
+*.mp4
