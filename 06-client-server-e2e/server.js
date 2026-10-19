@@ -14,11 +14,21 @@ app.use(express.json())
 
 app.get("/", async (req, res) => {
   try {
-    const stringifyPoliticians = await fs.readFile(
+  
+    setTimeout(async (
+
+      
+
+    )=> { 
+
+
+        const stringifyPoliticians = await fs.readFile(
       `${__dirname}/db/politicians.json`,
     )
     const politicians = JSON.parse(stringifyPoliticians)
     res.json(politicians)
+    },3000)
+    
   } catch (error) {
     console.error(error.message)
     res.status(500).send("Internal server error")
