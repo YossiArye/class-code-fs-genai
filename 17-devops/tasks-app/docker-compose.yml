@@ -1,0 +1,50 @@
+# One command to start the WHOLE development environment:
+#   docker compose up --build
+# Stop everything:
+#   docker compose down        (data is kept in the volume)
+#   docker compose down -v     (also deletes the database data!)
+
+services:
+  # ---------- 1. The database ----------
+  db:
+    image: mysql:8.4                 # ready-made image from Docker Hub
+    environment:
+      MYSQL_ROOT_PASSWORD: secret    # the official image reads these on first start
+      MYSQL_DATABASE: tasksdb        # creates this database automatically
+    ports:
+      - "3307:3306"                  # optional: connect from Workbench on localhost:3307
+    volumes:
+      - db-data:/var/lib/mysql       # keep the data even when the container is removed
+    healthcheck:                     # "is MySQL really ready to accept connections?"
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-psecret"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # ---------- 2. Our API ----------
+  server:
+    build: ./server                  # build the image from ./server/Dockerfile
+    ports:
+      - "3000:3000"                  # laptop:container
+    environment:
+      PORT: 3000
+      DB_HOST: db                    # <- the SERVICE NAME is the hostname!
+      DB_PORT: 3306                  # the port INSIDE the network (not 3307)
+      DB_USER: root
+      DB_PASSWORD: secret
+      DB_NAME: tasksdb
+    depends_on:
+      db:
+        condition: service_healthy   # wait until the healthcheck passes
+    restart: unless-stopped
+
+  # ---------- 3. The frontend (static files) ----------
+  frontend:
+    image: nginx:alpine              # a tiny web server for static files
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro   # serve our folder, read-only
+
+volumes:
+  db-data:                           # named volume managed by Docker

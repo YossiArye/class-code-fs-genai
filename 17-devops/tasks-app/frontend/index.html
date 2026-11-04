@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tasks</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 520px; margin: 40px auto; padding: 0 16px; }
+    form { display: flex; gap: 8px; }
+    input { flex: 1; padding: 8px; }
+    button { padding: 8px 12px; cursor: pointer; }
+    li { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+    li span { cursor: pointer; }
+    .done { text-decoration: line-through; color: #888; }
+    #status { font-size: 13px; color: #555; }
+  </style>
+</head>
+<body>
+  <h1>📝 Tasks</h1>
+  <p id="status">Connecting…</p>
+
+  <form id="form">
+    <input id="title" placeholder="What needs to be done?" required />
+    <button>Add</button>
+  </form>
+
+  <ul id="list"></ul>
+
+  <script>
+    // 👇 The ONLY line to change when you deploy.
+    //    Local (Docker Compose): http://localhost:3000
+    //    AWS:                    http://<EC2-PUBLIC-IP>
+    const API_URL = 'http://localhost:3000';
+
+    const list = document.getElementById('list');
+    const statusEl = document.getElementById('status');
+
+    async function loadTasks() {
+      try {
+        const health = await fetch(`${API_URL}/health`).then((r) => r.json());
+        statusEl.textContent = `API: ${health.status} · DB: ${health.db} · served by: ${health.host}`;
+
+        const tasks = await fetch(`${API_URL}/api/tasks`).then((r) => r.json());
+        list.innerHTML = '';
+        tasks.forEach((task) => {
+          const li = document.createElement('li');
+          li.innerHTML = `<span class="${task.done ? 'done' : ''}"></span><button>🗑</button>`;
+          li.querySelector('span').textContent = task.title; // textContent = safe from HTML injection
+          li.querySelector('span').onclick = () => toggleTask(task.id);
+          li.querySelector('button').onclick = () => deleteTask(task.id);
+          list.appendChild(li);
+        });
+      } catch (err) {
+        statusEl.textContent = `❌ Cannot reach the API at ${API_URL}`;
+      }
+    }
+
+    async function toggleTask(id) {
+      await fetch(`${API_URL}/api/tasks/${id}`, { method: 'PATCH' });
+      loadTasks();
+    }
+
+    async function deleteTask(id) {
+      await fetch(`${API_URL}/api/tasks/${id}`, { method: 'DELETE' });
+      loadTasks();
+    }
+
+    document.getElementById('form').onsubmit = async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('title');
+      await fetch(`${API_URL}/api/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: input.value }),
+      });
+      input.value = '';
+      loadTasks();
+    };
+
+    loadTasks();
+  </script>
+</body>
+</html>

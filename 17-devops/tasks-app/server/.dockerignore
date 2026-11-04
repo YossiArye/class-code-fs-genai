@@ -1,0 +1,7 @@
+# Files that should never be copied into the image
+node_modules
+npm-debug.log
+.env
+.git
+Dockerfile
+.dockerignore
