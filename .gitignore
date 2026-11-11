@@ -2,3 +2,6 @@ node_modules/
 # Excluded from GitHub
 dist/
 *.mp4
+
+# Old tutorial with credentials - never commit
+17-devops/AWS.docx
