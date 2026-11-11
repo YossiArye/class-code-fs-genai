@@ -29,6 +29,26 @@
 | `frontend` container (nginx) | **S3** static website hosting |
 | Docker network | **VPC** + **Security Groups** |
 
+### 🤔 Why is the frontend on S3 and not on EC2?
+
+The two parts of our app are **different kinds of work**:
+- The **frontend is just files** (here, one `index.html`). The server only has to send them as-is; all the logic runs in the visitor's browser. S3 is built to do exactly that, with no code.
+- The **API is a program** that runs code and talks to the database. It needs a real machine with Docker, so it goes on EC2.
+
+| | **S3** (frontend) | **EC2** (if we served the frontend there) |
+|---|---|---|
+| **Servers to manage** | None. AWS runs it | You install and update a web server (nginx/Docker), patch the OS, fix it when it crashes |
+| **Cost** | Pennies per month for a small site | A server running 24/7, even with zero visitors |
+| **Traffic spikes** | Scales automatically: 10 or 10 million visitors | One small machine slows down or falls over |
+| **Reliability** | Files stored across multiple data centers | One machine. If it dies, the site is gone |
+| **Setup** | Upload the file, turn on website hosting, add a policy | SSH, install a web server, open ports, deploy |
+
+Keeping them separate also means you can deploy one without touching the other: a frontend change is just uploading a new file, and the API isn't restarted.
+
+> 💡 **When would the frontend go on EC2?** When it's not static, for example server-side rendering (like Next.js), or when you want one machine for everything. In Part 1, nginx served the frontend locally just for convenience.
+>
+> **S3's limitation:** S3 website hosting is HTTP only. Real products put **CloudFront** (AWS's CDN) in front of S3 for HTTPS, a custom domain and fast loading worldwide. That's a next step after this lesson.
+
 > 💡 **Three places to type in Part 2.** Always check where you are before typing:
 >
 > | Where | How it looks | What you do there |
@@ -717,6 +737,206 @@ Then:
 
 > 🧑‍🏫 **Teacher tip:** do the cleanup **together on screen**, in the last 10 minutes of the lesson. Students who "will do it later" forget, and get a bill next month.
 > (If you want students to keep the app for the homework, have them clean up right after submitting.)
+
+---
+
+## 2.9 ☸️ Bonus: Kubernetes basics (30 min)
+
+> The goal: understand **what problem Kubernetes solves**, and see it with your own eyes on your laptop. Free, no AWS needed.
+
+### The problem
+
+Today we ran **1 container on 1 server**, and we did everything by hand: `ssh`, `docker run`, and if it crashes, `--restart` brings it back.
+
+Now imagine a real company:
+- **50 containers** (API, workers, frontend...), on **10 servers**.
+- A server dies at 3 a.m. Who moves its containers to another server?
+- Traffic grows 10× on Black Friday. Who starts 20 more copies of the API, and who splits the visitors between them?
+- A new version comes out. Who replaces the containers **one by one**, with zero downtime?
+
+Doing this with `ssh` + `docker run` is impossible. That's what **Kubernetes** (also called **K8s**: K + 8 letters + s) does.
+
+### The idea in one sentence
+
+**You tell Kubernetes what you want, and it makes it happen, and keeps it that way.**
+
+```
+You:         "I want 3 copies of tasks-api running, always."
+Kubernetes:  starts 3 ✅ ... a server dies, 1 copy is gone ... starts a new one ✅ (still 3)
+```
+
+This is called **desired state**: you describe the goal, not the steps. Kubernetes checks all the time that reality = your goal, and fixes the difference by itself.
+
+> 🎵 **Analogy:** Docker is a musician playing one instrument. Kubernetes is the **conductor** of an orchestra: it decides who plays, where, and replaces a musician who falls off the chair.
+
+### The 5 words you need
+
+| Kubernetes word | Plain English | What it was today |
+|---|---|---|
+| **Cluster** | A group of servers that Kubernetes manages as one big computer | Our single EC2 server |
+| **Node** | One server in the cluster | The EC2 instance |
+| **Pod** | The smallest unit: a wrapper around **one container** (usually) | Our `api` container |
+| **Deployment** | "Keep N copies of this pod running, and update them safely" | `docker run` + `--restart unless-stopped`, but for many copies |
+| **Service** | One stable address that spreads requests between all the copies | Port `80` on the EC2 public IP |
+
+```
+                        Service (one address)
+                       ┌─────────┼─────────┐
+                       ▼         ▼         ▼
+                     Pod 1     Pod 2     Pod 3      ← Deployment: "replicas: 3"
+                    (Node A)  (Node B)  (Node A)    ← Kubernetes picks the servers
+```
+
+### 🛠️ Hands-on: your first Kubernetes app (on your laptop)
+
+We'll run a tiny demo web server, **3 copies** of it, and watch Kubernetes balance traffic, heal itself and scale. All commands run in **your laptop's terminal**.
+
+> 💡 Why not our tasks API? It needs a database, which means more YAML. The demo image (`traefik/whoami`) needs nothing, and it answers with **its own pod name**, so we can see *which* copy answered.
+
+#### Step 1: Turn on Kubernetes (one time, ~3 min)
+
+Docker Desktop → ⚙️ **Settings** → **Kubernetes** → tick **Enable Kubernetes** (if asked for a cluster type, choose **kubeadm**) → **Apply & restart**. Wait until the Kubernetes icon at the bottom of Docker Desktop is **green**.
+
+```bash
+kubectl get nodes
+```
+
+```
+NAME             STATUS   ROLES           AGE   VERSION
+docker-desktop   Ready    control-plane   1m    v1.3x.x
+```
+
+`kubectl` (say "cube-control") is the Kubernetes command line, like `docker` is for Docker. One node = a cluster of one server: your laptop.
+
+#### Step 2: Describe what you want (the YAML)
+
+Open [`k8s-demo/hello.yaml`](k8s-demo/hello.yaml) (it's in this folder). It has two parts, separated by `---`:
+
+| Part | Key line | Meaning |
+|---|---|---|
+| **Deployment** `hello` | `replicas: 3` | "Keep 3 copies running, always" |
+| | `image: traefik/whoami` | Which image each pod runs (like `image:` in Compose) |
+| | `labels: app: hello` | A **name tag** on each pod. That's how the Deployment and the Service find "their" pods |
+| **Service** `hello` | `selector: app: hello` | "Send traffic to every pod with the tag `app: hello`" |
+| | `type: LoadBalancer` | Open the Service **outside** the cluster. On Docker Desktop it appears on `localhost`; on AWS (EKS) this creates a real AWS load balancer |
+| | `port: 8081` → `targetPort: 80` | You call port 8081, the pods listen on 80. Like `-p 8081:80` in Docker. (Not 8080: the Part 1 frontend already uses it) |
+
+#### Step 3: Send it to the cluster
+
+```bash
+cd k8s-demo
+kubectl apply -f hello.yaml
+kubectl get pods
+```
+
+```
+NAME                     READY   STATUS    RESTARTS   AGE
+hello-6d4b8c9f7d-2xkqp   1/1     Running   0          10s
+hello-6d4b8c9f7d-8mzrt   1/1     Running   0          10s
+hello-6d4b8c9f7d-tq5vn   1/1     Running   0          10s
+```
+
+**3 pods**, and we never typed `docker run`. We only described the goal. (If `STATUS` says `ContainerCreating`, it's still downloading the image. Run `kubectl get pods` again in a few seconds.)
+
+#### Step 4: See the load balancing
+
+The Service gives the 3 pods **one** address: `localhost:8081`. Check it's ready:
+
+```bash
+kubectl get service hello
+```
+
+```
+NAME    TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)          AGE
+hello   LoadBalancer   10.96.45.120   localhost     8081:31234/TCP   30s
+```
+
+`EXTERNAL-IP` = `localhost` means it's open to your laptop. Now call it several times from **your laptop's terminal** (run the line 4 to 5 times: ↑ + Enter):
+
+```bash
+curl -s localhost:8081 | grep Hostname
+```
+
+```
+Hostname: hello-6d4b8c9f7d-8mzrt
+Hostname: hello-6d4b8c9f7d-2xkqp
+Hostname: hello-6d4b8c9f7d-8mzrt
+Hostname: hello-6d4b8c9f7d-tq5vn
+```
+
+**Different pods answer!** Same address, and the Service spreads the requests between the copies.
+
+> 🪟 **Windows:** PowerShell's `curl` is different. Use `curl.exe -s localhost:8081`, or just open http://localhost:8081 in the browser.
+> 🌐 **In the browser** you may see the **same** pod name on every refresh: the browser keeps one connection open and reuses it. `curl` opens a new connection each time, so it shows the balancing.
+
+> 💡 **Another way: from inside the cluster.** Inside the cluster, the Service also has a **name**: `hello` (Kubernetes has its own DNS, like `db` in Compose). Start a throw-away pod with tools in it and call it by name:
+> ```bash
+> kubectl run tester --rm -it --image=busybox -- sh
+> wget -qO- http://hello:8081 | grep Hostname     # inside the pod (/ # prompt)
+> exit                                             # the pod is deleted (--rm)
+> ```
+> That's how pods talk to each other in real apps: an API pod reaches a database by its Service name.
+
+#### Step 5: Self-healing: kill a pod
+
+```bash
+kubectl get pods                       # copy one pod name
+kubectl delete pod hello-6d4b8c9f7d-2xkqp
+kubectl get pods
+```
+
+There are **still 3 pods**: one has a new name and `AGE` of a few seconds. You deleted one, the Deployment saw "2 ≠ 3" and **created a new one by itself**. That's desired state. (Today on EC2, if the server died, nobody would do that for us.)
+
+#### Step 6: Scale up: change the goal
+
+In `hello.yaml`, change `replicas: 3` to `replicas: 5`, save, and apply again:
+
+```bash
+kubectl apply -f hello.yaml
+kubectl get pods                       # 5 pods ✅
+```
+
+Same command as before. We didn't say "start 2 more", we said "I want 5", and Kubernetes did the math. Try `replicas: 2` too: it removes the extra pods.
+
+#### Step 7: Clean up
+
+```bash
+kubectl delete -f hello.yaml           # deletes the Deployment, its pods and the Service
+kubectl get pods                       # No resources found ✅
+```
+
+Kubernetes uses a lot of RAM. When you're done, turn it off: Docker Desktop → Settings → Kubernetes → untick **Enable Kubernetes** → Apply & restart.
+
+#### 🆘 If something doesn't work
+
+| Symptom | Fix |
+|---|---|
+| `kubectl get nodes`: `connection refused` / `couldn't get current server API` | Kubernetes isn't running yet. Check Docker Desktop: the Kubernetes icon must be green |
+| Pod `STATUS` = `ImagePullBackOff` / `ErrImagePull` | Kubernetes can't download the image: check the internet connection and the image name in the YAML |
+| `EXTERNAL-IP` stays `<pending>` | Usually the port is **already taken** on your laptop (for example a container from Part 1). Check: `kubectl logs -n kube-system vpnkit-controller --tail 5`. If it says `Port 8081 ... is already opened by another service`, stop that app (`docker compose down` in `tasks-app`), or change `port: 8081` in `hello.yaml` to a free port (like `8082`), `kubectl apply` again, and call that port |
+| Still `<pending>` / `curl` fails | Use a tunnel instead: `kubectl port-forward service/hello 8081:8081` (in a second terminal; it reaches only **one** pod, so you'll always see the same name) |
+| You edited `hello.yaml` but nothing changed | Kubernetes doesn't watch the file. Run `kubectl apply -f hello.yaml` again after every change |
+| `kubectl run tester ...` says `AlreadyExists` | An old tester pod is stuck: `kubectl delete pod tester`, then run again |
+
+### Docker vs Kubernetes: what changed?
+
+| Today (Docker) | Kubernetes |
+|---|---|
+| `docker run ...` (a command: "do this") | `kubectl apply -f file.yaml` (a goal: "I want this") |
+| 1 container | `replicas: 3`, and it keeps that number |
+| `--restart unless-stopped` (same server only) | A dead pod is recreated, even on **another** server |
+| Port `80` on one EC2 IP (`-p 80:3000`) | A **Service** (`type: LoadBalancer`): one address for all the copies |
+| 5 commands to deploy a new version (2.7) | Change the image tag in the YAML → `kubectl apply` → pods replaced **one by one**, zero downtime |
+
+> 💡 In a real cluster with many servers, the image can't be built "on the server" like we did on EC2. It's pushed to a **registry** (Docker Hub, or **AWS ECR**), and every node downloads it from there.
+
+### Do I need it?
+
+- **For our tasks app: no.** One server and one container are perfectly fine. Kubernetes is powerful but complex, and it costs more.
+- **Big apps with many services and lots of traffic: yes.** That's why it shows up in so many job ads.
+- On AWS, the managed Kubernetes is called **EKS**. (Simpler AWS option for containers without Kubernetes: **ECS**.)
+
+> 🔑 **The big lesson:** Docker made **one** container easy to run anywhere. Kubernetes makes **many** containers easy to run across **many** servers. You can't learn Kubernetes without Docker, and you already know Docker. 💪
 
 ---
 

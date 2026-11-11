@@ -1,0 +1,38 @@
+# Kubernetes hands-on (section 2.9 in 2-aws.md)
+# Run:    kubectl apply -f hello.yaml
+# Remove: kubectl delete -f hello.yaml
+
+# 1) Deployment: "keep 3 copies of this container running, always"
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello
+spec:
+  replicas: 5                   # how many copies (pods) we want
+  selector:
+    matchLabels:
+      app: hello                # this Deployment manages pods with this label
+  template:                     # the "recipe" for each pod
+    metadata:
+      labels:
+        app: hello
+    spec:
+      containers:
+        - name: whoami
+          image: traefik/whoami # tiny web server that answers with its own pod name
+          ports:
+            - containerPort: 80
+
+---
+# 2) Service: one stable address that spreads requests between the pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello
+spec:
+  type: LoadBalancer            # open it OUTSIDE the cluster (Docker Desktop: localhost:8081)
+  selector:
+    app: hello                  # send traffic to every pod with this label
+  ports:
+    - port: 8081                # the port you call from your laptop
+      targetPort: 80            # the container's port
