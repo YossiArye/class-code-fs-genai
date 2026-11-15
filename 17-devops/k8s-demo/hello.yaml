@@ -8,7 +8,7 @@ kind: Deployment
 metadata:
   name: hello
 spec:
-  replicas: 5                   # how many copies (pods) we want
+  replicas: 3                   # how many copies (pods) we want
   selector:
     matchLabels:
       app: hello                # this Deployment manages pods with this label
